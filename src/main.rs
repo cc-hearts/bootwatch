@@ -4,7 +4,7 @@ use crate::platform::macos::StartupType;
 fn main() {
     println!("BootWatch - startup item scanner\n");
 
-    let items = platform::macos::get_all_startup_items();
+    let items = platform::get_all_startup_items();
 
     println!("📦 共发现 {} 个开机启动项：\n", items.len());
     for item in items {
