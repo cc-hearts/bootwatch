@@ -6,7 +6,7 @@ use shellexpand;
 
 /// 启动项类型
 #[derive(Debug)]
-enum StartupType {
+pub enum StartupType {
     Plist,
     LoginItem,
 }
