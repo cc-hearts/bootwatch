@@ -1,4 +1,3 @@
-
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -7,7 +6,7 @@ use shellexpand;
 
 /// 启动项类型
 #[derive(Debug)]
-pub enum StartupType {
+enum StartupType {
     Plist,
     LoginItem,
 }
@@ -27,9 +26,9 @@ pub fn get_startup_apps() -> Vec<StartupItem> {
 
     // 要检查的目录
     let dirs = vec![
-        "~/Library/LaunchAgents",       // 用户级
-        "/Library/LaunchAgents",        // 系统用户环境
-        "/Library/LaunchDaemons",       // 系统服务
+        "~/Library/LaunchAgents", // 用户级
+        "/Library/LaunchAgents",  // 系统用户环境
+        "/Library/LaunchDaemons", // 系统服务
     ];
 
     for dir in dirs {

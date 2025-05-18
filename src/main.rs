@@ -1,5 +1,5 @@
 mod platform;
-use crate::platform::macos::StartupType;
+use crate::platform::StartupType;
 
 fn main() {
     println!("BootWatch - startup item scanner\n");
@@ -10,10 +10,28 @@ fn main() {
     for item in items {
         match item.item_type {
             StartupType::Plist => {
-                println!("📝 {} ({})", item.label, item.path.as_deref().unwrap_or("未知路径"));
+                println!(
+                    "📝 {} ({})",
+                    item.label,
+                    item.path.as_deref().unwrap_or("未知路径")
+                );
             }
             StartupType::LoginItem => {
                 println!("🚀 {} (Login Item)", item.label);
+            }
+            StartupType::Registry => {
+                println!(
+                    "🔑 {} (Registry, {})",
+                    item.label,
+                    item.path.as_deref().unwrap_or("未知路径")
+                );
+            }
+            StartupType::StartupFolder => {
+                println!(
+                    "📂 {} (Startup Folder, {})",
+                    item.label,
+                    item.path.as_deref().unwrap_or("未知路径")
+                );
             }
         }
     }
