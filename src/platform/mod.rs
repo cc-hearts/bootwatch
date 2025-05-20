@@ -23,7 +23,7 @@ pub struct StartupItem {
 
 #[cfg(target_os = "macos")]
 pub fn get_all_startup_items() -> Vec<StartupItem> {
-    macos::get_startup_apps()
+    macos::get_all_startup_items()
         .into_iter()
         .map(|item| StartupItem {
             label: item.label,
