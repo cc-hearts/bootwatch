@@ -1,8 +1,8 @@
+use crate::platform::helper::OptionItem;
+use shellexpand;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-
-use shellexpand;
 
 /// 启动项类型
 #[derive(Debug)]
@@ -95,4 +95,52 @@ pub fn get_all_startup_items() -> Vec<StartupItem> {
     all.extend(get_startup_apps());
     all.extend(get_login_items());
     all
+}
+
+/// 删除指定的开机启动项。
+/// 参数：item - 要删除的启动项。
+#[cfg(target_os = "macos")]
+pub fn delete_startup_item(item: &OptionItem) -> Result<(), Box<dyn std::error::Error>> {
+    use std::process::Command;
+
+    match item.value.as_str() {
+        value if value.ends_with(".plist") => {
+            // 对于 Plist 文件，使用 launchctl 卸载并删除文件
+            let unload_cmd = Command::new("launchctl")
+                .arg("unload")
+                .arg(&item.value)
+                .output()
+                .expect("Failed to unload plist");
+
+            if unload_cmd.status.success() {
+                std::fs::remove_file(&item.value).expect("Failed to delete plist file");
+                println!("成功删除 Plist 启动项: {}", item.value);
+            } else {
+                return Err("卸载 Plist 失败".into());
+            }
+        }
+        value if item.label.contains("Login Item") => {
+            // 对于 Login Item，使用 osascript（AppleScript）移除
+            // 这是一个简化示例，实际可能需要更多处理
+            let script = format!(
+                r#"tell application "System Events" to delete login item "{}""#,
+                item.value
+            );
+            let output = Command::new("osascript")
+                .arg("-e")
+                .arg(script)
+                .output()
+                .expect("Failed to delete login item");
+
+            if output.status.success() {
+                println!("成功删除 Login Item: {}", item.value);
+            } else {
+                return Err("删除 Login Item 失败".into());
+            }
+        }
+        _ => {
+            return Err("不支持的启动项类型".into());
+        }
+    }
+    Ok(())
 }

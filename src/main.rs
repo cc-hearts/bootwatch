@@ -1,13 +1,9 @@
 mod platform;
 use crate::platform::StartupType;
+use crate::platform::helper::OptionItem;
 use dialoguer::{Select, theme::ColorfulTheme};
+use platform::macos::delete_startup_item;
 use std::error::Error;
-
-#[derive(Debug)]
-struct OptionItem {
-    label: String,
-    value: String,
-}
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("BootWatch - startup item scanner\n");
@@ -68,5 +64,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let selected = &select_ret[selection];
     println!("你选择了: {} (值: {})", selected.label, selected.value);
 
+    delete_startup_item(selected).unwrap();
     Ok(())
 }
