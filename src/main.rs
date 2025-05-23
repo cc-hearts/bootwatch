@@ -1,8 +1,8 @@
 mod platform;
-use crate::platform::StartupType;
+mod utils;
 use crate::platform::helper::OptionItem;
-use dialoguer::{Select, theme::ColorfulTheme};
-use platform::macos::delete_startup_item;
+use crate::platform::StartupType;
+use dialoguer::{theme::ColorfulTheme, Select};
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -21,12 +21,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                         item.label,
                         item.path.as_deref().unwrap_or("未知路径")
                     ),
+                    origin_label: item.label,
                     value: item.path.as_deref().unwrap_or("").to_string(),
                 });
             }
             StartupType::LoginItem => {
                 select_ret.push(OptionItem {
                     label: format!("🚀 {} (Login Item)", item.label,),
+                    origin_label: item.label.clone(),
                     value: item.label,
                 });
             }
@@ -37,6 +39,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                         item.label,
                         item.path.as_deref().unwrap_or("未知路径")
                     ),
+
+                    origin_label: item.label,
                     value: item.path.as_deref().unwrap_or("").to_string(),
                 });
             }
@@ -47,6 +51,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         item.label,
                         item.path.as_deref().unwrap_or("未知路径")
                     ),
+                    origin_label: item.label,
                     value: item.path.as_deref().unwrap_or("").to_string(),
                 });
             }
@@ -64,6 +69,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     let selected = &select_ret[selection];
     println!("你选择了: {} (值: {})", selected.label, selected.value);
 
-    delete_startup_item(selected).unwrap();
+    #[cfg(target_os = "macos")]
+    crate::platform::macos::delete_startup_item(selected).unwrap();
+
+    #[cfg(target_os = "windows")]
+    crate::platform::windows::delete_startup_item(selected).unwrap();
+
     Ok(())
 }

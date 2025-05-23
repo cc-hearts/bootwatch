@@ -51,8 +51,3 @@ pub fn get_all_startup_items() -> Vec<StartupItem> {
         })
         .collect()
 }
-
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub fn get_all_startup_items() -> Vec<StartupItem> {
-    vec![]
-}

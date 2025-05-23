@@ -1,7 +1,9 @@
+use crate::platform::helper::OptionItem;
 use std::fs;
 use std::path::PathBuf;
-use winreg::RegKey;
+use std::process::Command;
 use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE}; // Import HKCU and HKLM
+use winreg::RegKey;
 
 /// 启动项类型
 #[derive(Debug)]
@@ -83,4 +85,27 @@ fn get_startup_folder() -> Option<PathBuf> {
                 .join("Startup")
         })
         .ok()
+}
+
+#[cfg(target_os = "windows")]
+pub fn delete_startup_item(item: &OptionItem) -> Result<(), Box<dyn std::error::Error>> {
+    // 构建要执行的 reg delete 命令
+    let command = format!(
+        r#"reg delete HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run /v {} /f"#,
+        item.origin_label
+    );
+
+    // 执行命令
+    let output = Command::new("cmd").args(&["/C", &command]).output()?;
+
+    // 检查命令执行结果
+    if output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        println!("执行命令成功: {}", command);
+        println!("命令输出: {}", stdout);
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("执行命令失败: {}\n错误: {}", command, stderr).into())
+    }
 }
