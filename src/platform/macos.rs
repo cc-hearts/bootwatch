@@ -119,7 +119,7 @@ pub fn delete_startup_item(item: &OptionItem) -> Result<(), Box<dyn std::error::
                 return Err("卸载 Plist 失败".into());
             }
         }
-        value if item.label.contains("Login Item") => {
+        _ if item.label.contains("Login Item") => {
             // 对于 Login Item，使用 osascript（AppleScript）移除
             // 这是一个简化示例，实际可能需要更多处理
             let script = format!(

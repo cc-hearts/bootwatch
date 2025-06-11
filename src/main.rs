@@ -1,5 +1,4 @@
 mod platform;
-mod utils;
 use crate::platform::helper::OptionItem;
 use crate::platform::StartupType;
 use dialoguer::{theme::ColorfulTheme, Select};
@@ -21,17 +20,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                         item.label,
                         item.path.as_deref().unwrap_or("未知路径")
                     ),
-                    origin_label: item.label,
                     value: item.path.as_deref().unwrap_or("").to_string(),
                 });
             }
             StartupType::LoginItem => {
                 select_ret.push(OptionItem {
                     label: format!("🚀 {} (Login Item)", item.label,),
-                    origin_label: item.label.clone(),
                     value: item.label,
                 });
             }
+            #[cfg(target_os = "windows")]
             StartupType::Registry => {
                 select_ret.push(OptionItem {
                     label: format!(
@@ -40,10 +38,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                         item.path.as_deref().unwrap_or("未知路径")
                     ),
 
-                    origin_label: item.label,
                     value: item.path.as_deref().unwrap_or("").to_string(),
                 });
             }
+
+            #[cfg(target_os = "windows")]
             StartupType::StartupFolder => {
                 select_ret.push(OptionItem {
                     label: format!(
@@ -51,7 +50,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                         item.label,
                         item.path.as_deref().unwrap_or("未知路径")
                     ),
-                    origin_label: item.label,
                     value: item.path.as_deref().unwrap_or("").to_string(),
                 });
             }

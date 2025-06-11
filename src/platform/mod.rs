@@ -8,9 +8,13 @@ pub mod windows;
 // Unified StartupType for cross-platform use
 #[derive(Debug)]
 pub enum StartupType {
-    Plist,         // macOS Plist-based startup item
-    LoginItem,     // macOS Login Item
-    Registry,      // Windows Registry-based startup item
+    #[cfg(target_os = "macos")]
+    Plist, // macOS Plist-based startup item
+    #[cfg(target_os = "macos")]
+    LoginItem, // macOS Login Item
+    #[cfg(target_os = "windows")]
+    Registry, // Windows Registry-based startup item
+    #[cfg(target_os = "windows")]
     StartupFolder, // Windows Startup folder shortcut
 }
 
