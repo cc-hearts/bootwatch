@@ -13,7 +13,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut select_ret: Vec<OptionItem> = vec![];
     for item in items {
         match item.item_type {
-            StartupType::Plist => {
+            #[cfg(target_os = "macos")]
+            StartupType::Registry => {
                 select_ret.push(OptionItem {
                     label: format!(
                         "📝 {} ({})",
@@ -23,7 +24,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                     value: item.path.as_deref().unwrap_or("").to_string(),
                 });
             }
-            StartupType::LoginItem => {
+            
+            #[cfg(target_os = "macos")]
+            StartupType::StartupFolder => {
                 select_ret.push(OptionItem {
                     label: format!("🚀 {} (Login Item)", item.label,),
                     value: item.label,
@@ -38,7 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         item.path.as_deref().unwrap_or("未知路径")
                     ),
 
-                    value: item.path.as_deref().unwrap_or("").to_string(),
+                    value:item.label,
                 });
             }
 

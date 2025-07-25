@@ -89,23 +89,24 @@ fn get_startup_folder() -> Option<PathBuf> {
 
 #[cfg(target_os = "windows")]
 pub fn delete_startup_item(item: &OptionItem) -> Result<(), Box<dyn std::error::Error>> {
-    // 构建要执行的 reg delete 命令
-    let command = format!(
-        r#"reg delete HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run /v {} /f"#,
-        item.origin_label
-    );
+    use encoding_rs::GBK;
 
-    // 执行命令
-    let output = Command::new("cmd").args(&["/C", &command]).output()?;
+    let output = Command::new("reg")
+        .args(&[
+            "delete",
+            r"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run",
+            "/v",
+            &item.value,
+            "/f",
+        ])
+        .output()?;
 
-    // 检查命令执行结果
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
-        println!("执行命令成功: {}", command);
-        println!("命令输出: {}", stdout);
+        println!("删除启动项成功: {}", stdout);
         Ok(())
     } else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("执行命令失败: {}\n错误: {}", command, stderr).into())
+        let (decoded_stderr, _, _) = GBK.decode(&output.stderr);
+        Err(format!("删除启动项失败: {}\n错误: {}", &item.label, decoded_stderr).into())
     }
 }
