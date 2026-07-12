@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-dialoguer = "0.11.0"
+crossterm = "0.27"
+ratatui = "0.27"
 encoding_rs = "0.8.35"
 shellexpand = "3.1.1"
 [target.'cfg(windows)'.dependencies]
