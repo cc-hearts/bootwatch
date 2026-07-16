@@ -1,5 +1,4 @@
-use crate::platform::helper::OptionItem;
-use shellexpand;
+use crate::platform::helper::{parse_token, OptionItem};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -17,6 +16,10 @@ pub struct StartupItem {
     pub label: String,
     pub path: Option<String>, // LoginItem 可能没有路径
     pub item_type: StartupType,
+    /// 平台相关的删除令牌，格式：
+    /// - Plist: `plist|<文件路径>`
+    /// - LoginItem: `loginitem|<名称>`
+    pub delete_value: String,
 }
 
 /// 获取 macOS 启动项（LaunchAgents & LaunchDaemons）
@@ -39,10 +42,12 @@ pub fn get_startup_apps() -> Vec<StartupItem> {
                     let path = entry.path();
                     if path.extension().and_then(|e| e.to_str()) == Some("plist") {
                         if let Some(file_name) = path.file_name().and_then(|f| f.to_str()) {
+                            let path_str = path.display().to_string();
                             items.push(StartupItem {
                                 label: file_name.to_string(),
-                                path: Some(path.display().to_string()),
+                                path: Some(path_str.clone()),
                                 item_type: StartupType::Plist,
+                                delete_value: format!("plist|{}", path_str),
                             });
                         }
                     }
@@ -71,6 +76,7 @@ pub fn get_login_items() -> Vec<StartupItem> {
                     .map(|s| s.trim().to_string())
                     .filter(|s| !s.is_empty())
                     .map(|label| StartupItem {
+                        delete_value: format!("loginitem|{}", label),
                         label,
                         path: None,
                         item_type: StartupType::LoginItem,
@@ -97,50 +103,64 @@ pub fn get_all_startup_items() -> Vec<StartupItem> {
     all
 }
 
+/// 转义 AppleScript 字符串中的特殊字符，避免注入
+#[cfg(target_os = "macos")]
+fn escape_applescript_string(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"")
+}
+
 /// 删除指定的开机启动项。
-/// 参数：item - 要删除的启动项。
+/// 参数：item - 要删除的启动项，其 `value` 为 `plist|<路径>` 或 `loginitem|<名称>`。
 #[cfg(target_os = "macos")]
 pub fn delete_startup_item(item: &OptionItem) -> Result<(), Box<dyn std::error::Error>> {
-    use std::process::Command;
+    // 令牌格式：<kind>|<payload>，其中 payload 可能自身包含 `|`（如路径/名称）
+    let (kind, payload) = parse_token(&item.value);
 
-    match item.value.as_str() {
-        value if value.ends_with(".plist") => {
-            // 对于 Plist 文件，使用 launchctl 卸载并删除文件
-            let unload_cmd = Command::new("launchctl")
-                .arg("unload")
-                .arg(&item.value)
-                .output()
-                .expect("Failed to unload plist");
-
-            if unload_cmd.status.success() {
-                std::fs::remove_file(&item.value).expect("Failed to delete plist file");
-                println!("成功删除 Plist 启动项: {}", item.value);
-            } else {
-                return Err("卸载 Plist 失败".into());
+    match kind {
+        "plist" => {
+            let path = payload;
+            // 先卸载，再删除文件；任一步失败均向上返回错误而非 panic
+            let unload = Command::new("launchctl").arg("unload").arg(path).output()?;
+            if !unload.status.success() {
+                let err = String::from_utf8_lossy(&unload.stderr);
+                return Err(format!("卸载 Plist 失败 ({}): {}", item.label, err.trim()).into());
             }
+            fs::remove_file(path)?;
         }
-        _ if item.label.contains("Login Item") => {
-            // 对于 Login Item，使用 osascript（AppleScript）移除
-            // 这是一个简化示例，实际可能需要更多处理
+        "loginitem" => {
+            let name = payload;
+            let escaped = escape_applescript_string(name);
             let script = format!(
                 r#"tell application "System Events" to delete login item "{}""#,
-                item.value
+                escaped
             );
-            let output = Command::new("osascript")
-                .arg("-e")
-                .arg(script)
-                .output()
-                .expect("Failed to delete login item");
-
-            if output.status.success() {
-                println!("成功删除 Login Item: {}", item.value);
-            } else {
-                return Err("删除 Login Item 失败".into());
+            let output = Command::new("osascript").arg("-e").arg(script).output()?;
+            if !output.status.success() {
+                let err = String::from_utf8_lossy(&output.stderr);
+                return Err(
+                    format!("删除 Login Item 失败 ({}): {}", item.label, err.trim()).into(),
+                );
             }
         }
         _ => {
-            return Err("不支持的启动项类型".into());
+            return Err(format!("不支持的启动项类型: {}", item.value).into());
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::escape_applescript_string;
+
+    #[test]
+    fn escape_quotes_and_backslashes() {
+        assert_eq!(escape_applescript_string(r#"a"b"#), r#"a\"b"#);
+        assert_eq!(escape_applescript_string(r"a\b"), r"a\\b");
+    }
+
+    #[test]
+    fn escape_plain_string_unchanged() {
+        assert_eq!(escape_applescript_string("Dropbox"), "Dropbox");
+    }
 }

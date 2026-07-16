@@ -26,6 +26,9 @@ pub struct StartupItem {
     pub label: String,
     pub path: Option<String>,
     pub item_type: StartupType,
+    /// 平台相关的删除令牌，由各平台模块在构造时填充，
+    /// 删除时原样传回对应平台的 `delete_startup_item` 解析。
+    pub delete_value: String,
 }
 
 #[cfg(target_os = "macos")]
@@ -39,6 +42,7 @@ pub fn get_all_startup_items() -> Vec<StartupItem> {
                 macos::StartupType::Plist => StartupType::Plist,
                 macos::StartupType::LoginItem => StartupType::LoginItem,
             },
+            delete_value: item.delete_value,
         })
         .collect()
 }
@@ -54,6 +58,7 @@ pub fn get_all_startup_items() -> Vec<StartupItem> {
                 windows::StartupType::Registry => StartupType::Registry,
                 windows::StartupType::StartupFolder => StartupType::StartupFolder,
             },
+            delete_value: item.delete_value,
         })
         .collect()
 }
@@ -63,27 +68,25 @@ pub fn get_display_items() -> Vec<DisplayItem> {
     get_all_startup_items()
         .into_iter()
         .map(|item| {
-            let (icon, type_label, value): (&str, &str, String) = match &item.item_type {
+            let (icon, type_label): (&str, &str) = match &item.item_type {
                 #[cfg(target_os = "macos")]
-                StartupType::Plist => ("📝", "Plist", item.path.clone().unwrap_or_default()),
+                StartupType::Plist => ("📝", "Plist"),
                 #[cfg(target_os = "macos")]
-                StartupType::LoginItem => ("🚀", "Login Item", item.label.clone()),
+                StartupType::LoginItem => ("🚀", "Login Item"),
                 #[cfg(target_os = "windows")]
-                StartupType::Registry => ("🔑", "Registry", item.label.clone()),
+                StartupType::Registry => ("🔑", "Registry"),
                 #[cfg(target_os = "windows")]
-                StartupType::StartupFolder => {
-                    ("📂", "StartupFolder", item.path.clone().unwrap_or_default())
-                }
+                StartupType::StartupFolder => ("📂", "StartupFolder"),
             };
             DisplayItem {
                 icon: icon.to_string(),
                 type_label: type_label.to_string(),
                 label: item.label.clone(),
                 path: item.path.clone(),
-                // option.label 内含类型标签，供各平台删除逻辑识别类型
+                // option.value 携带平台相关删除令牌，删除时由各平台解析
                 option: helper::OptionItem {
                     label: format!("{}: {}", type_label, item.label),
-                    value,
+                    value: item.delete_value.clone(),
                 },
             }
         })

@@ -15,6 +15,14 @@ use std::time::Duration;
 
 /// 启动 TUI 应用，负责终端的初始化与还原
 pub fn run() -> io::Result<()> {
+    // 设置 panic hook：即便运行中 panic，也先还原终端状态，避免终端卡死在 raw mode
+    let original_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        let _ = disable_raw_mode();
+        let _ = execute!(io::stdout(), LeaveAlternateScreen);
+        original_hook(info);
+    }));
+
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
@@ -114,11 +122,7 @@ impl App {
             return;
         }
         let i = self.state.selected().unwrap_or(0);
-        let i = if i == 0 {
-            self.items.len() - 1
-        } else {
-            i - 1
-        };
+        let i = if i == 0 { self.items.len() - 1 } else { i - 1 };
         self.state.select(Some(i));
     }
 
@@ -169,7 +173,11 @@ impl App {
 
         // 标题栏
         let header = Paragraph::new("BootWatch 🔍  开机启动项管理")
-            .style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD))
+            .style(
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            )
             .block(Block::default().borders(Borders::ALL));
         f.render_widget(header, chunks[0]);
 
@@ -238,9 +246,7 @@ impl App {
         let lines = vec![
             Line::from(Span::styled(
                 "⚠  确认删除该启动项？",
-                Style::default()
-                    .fg(Color::Red)
-                    .add_modifier(Modifier::BOLD),
+                Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
             )),
             Line::from(""),
             Line::from(Span::styled(
