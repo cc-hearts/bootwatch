@@ -15,3 +15,8 @@ shellexpand = "3.1.1"
 [target.'cfg(windows)'.dependencies]
 winreg = "0.55.0"
 encoding_rs = "0.8.35"
+
+# cargo-binstall：从 GitHub Release 拉取预编译二进制
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }{ archive-suffix }"
+bin-dir = "{ bin }{ binary-ext }"
